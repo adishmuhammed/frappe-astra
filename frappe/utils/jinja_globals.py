@@ -122,10 +122,19 @@ def include_icons(path, preload=True):
 
 		frappe.local.preload_assets["icons"].append(path)
 
+	# The response is only inserted if it is a success and not an HTML document: the
+	# caller names the file, and a wrong path answers with a full error page whose own
+	# <link> and <script> tags would be parsed inside #all-symbols and apply to the
+	# page (website.bundle.css makes body a column and collapses .main-section on Desk).
 	return (
 		'<script type="text/javascript">fetch(`'
 		+ path
-		+ '?v=${window._version_number}`, {credentials: "same-origin"}).then((r) => r.text()).then((svg) => {let c = document.getElementById("all-symbols"); c.insertAdjacentHTML("beforeend", svg);});</script>'
+		+ '?v=${window._version_number}`, {credentials: "same-origin"})'
+		+ '.then((r) => (r.ok && !String(r.headers.get("content-type") || "")'
+		+ '.toLowerCase().includes("text/html")) ? r.text() : null)'
+		+ '.then((svg) => {if (svg) {let c = document.getElementById("all-symbols");'
+		+ ' c.insertAdjacentHTML("beforeend", svg);}});'
+		+ "</script>"
 	)
 
 
